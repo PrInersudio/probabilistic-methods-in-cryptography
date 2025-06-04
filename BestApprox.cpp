@@ -42,7 +42,7 @@ static std::string getZhegalkin(const std::bitset<32> &f5, const std::array<uint
         first = false;
         for (uint8_t bit = 0; bit < 5; ++bit)
             if (i & (1 << (4 - bit)))
-                oss << "x_" << var_indexes[bit];
+                oss << "x_" << static_cast<int>(var_indexes[bit]);
     }
     if (first) oss << "0";
     return oss.str();
@@ -66,8 +66,8 @@ int main() {
         appr.var = 0;
         appr.matches = 0;
     }
-    for (uint8_t i = 0; i < 6; ++i)
-        tbb::parallel_for(tbb::blocked_range<uint64_t>(0, 1UL << 32, 65536),
+    for (uint8_t i = 0; i < 6; ++i) {
+        tbb::parallel_for(tbb::blocked_range<uint64_t>(0, 1UL << 32, 1UL << 25),
         [&](const tbb::blocked_range<size_t>& r) {
             BestApprox local_best_approx; local_best_approx.approx.reset(); local_best_approx.var = 0; local_best_approx.matches = 0;
             for (uint64_t possible_approx = r.begin(); possible_approx != r.end(); ++possible_approx) {
@@ -89,7 +89,6 @@ int main() {
                 best_approx[i].matches = local_best_approx.matches;
             }
         });
-    for (uint8_t i = 0; i < 6; ++i) {
         std::array<uint8_t, 5> var_indexes;
         auto it = var_indexes.begin();
         for (uint8_t j = 0; j < 6 ; ++j) {
