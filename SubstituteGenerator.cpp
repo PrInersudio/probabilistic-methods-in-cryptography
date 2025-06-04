@@ -14,7 +14,6 @@ Substitute genSubstitute() {
         while (std::find(substitute.begin(), substitute.begin() + i, variant) != substitute.begin() + i);
         substitute[i] = variant;
     }
-    std::cout << toString(substitute) << std::endl;
     return substitute;
 }
 
