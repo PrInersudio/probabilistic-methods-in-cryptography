@@ -9,9 +9,7 @@ inline uint8_t dotProduct(uint8_t a, uint8_t b) noexcept {
 }
 
 inline bool good(const std::array<std::array<uint8_t, 64>, 64>& linear_characteristic, uint8_t border) noexcept {
-    return std::any_of(linear_characteristic.begin(), linear_characteristic.end(), [border](const auto& row) {
-        return std::any_of(row.begin() + 1, row.end(), [border](uint8_t val) { return val > border; });
-    });
+    return std::abs(static_cast<int>(linear_characteristic[63][63] - border) >= 32);
 }
 
 std::pair<Substitute, std::array<std::array<uint8_t, 64>, 64>> linearCharacteristic() {
@@ -27,6 +25,6 @@ std::pair<Substitute, std::array<std::array<uint8_t, 64>, 64>> linearCharacteris
                         ++linear_characteristic[a][c];
             }
         }
-    } while (!good(linear_characteristic, 55));
+    } while (!good(linear_characteristic, 16));
     return std::make_pair(substitute, linear_characteristic);
 }
