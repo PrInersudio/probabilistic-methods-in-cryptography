@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "BlockCipherX.hpp"
 
-#define NUM_BLOCKS 32
+#define NUM_BLOCKS 16384
 #define TEXT_LEN NUM_BLOCKS * 3
 
 inline std::bitset<6> Pbox(const std::bitset<6> &subblock, const uint8_t num_subblock) noexcept {
@@ -92,7 +92,10 @@ inline std::bitset<6> invPbox(const std::bitset<6> &subblock, const uint8_t num_
 }
 
 inline void getSubblocks(std::bitset<6> (&subblocks)[4], const uint8_t *text, const size_t pos) noexcept {
-    uint32_t block = (text[pos] << 16) | (text[pos + 1] << 8) | text[pos + 2];
+    uint32_t block =
+        (static_cast<uint32_t>(text[pos]) << 16) |
+        (static_cast<uint32_t>(text[pos + 1]) << 8) | 
+        static_cast<uint32_t>(text[pos + 2]);
     for (uint8_t i = 0; i < 4; ++i)
         for (uint8_t j = 0; j < 6; ++j)
             subblocks[i][j] = (block >> (23 - (i * 6 + j))) & 1;
@@ -111,17 +114,13 @@ std::bitset<6> S(const std::bitset<6>& input) noexcept {
     return output;
 }
 
-inline uint8_t dotProduct(const std::bitset<6>& a, const std::bitset<6>& b) noexcept {
-    return (a & b).count() & 1;
-}
-
 struct BestKeys {
     std::bitset<6> round0;
     std::bitset<6> round2;
     size_t T = 0;
 };
 
-constexpr uint8_t Pbox_transitions[4] = { 3, 1, 0, 2 };
+constexpr uint8_t Pbox_transitions[4] = { 2, 1, 3, 0 };
 
 static std::string toHex(const std::array<uint8_t, 9> &data) noexcept {
     std::ostringstream oss;
@@ -151,15 +150,13 @@ int main() {
             plain_subblocks[j][i / 3] = local_plain_subblocks[j];
             cipher_subblocks[j][i / 3] = local_cipher_subblocks[Pbox_transitions[j]];
         }
+
     }
 
-    constexpr std::bitset<6> a(63);
-    constexpr std::bitset<6> c(63);
     BestKeys max_best_keys[4];
     BestKeys min_best_keys[4];
     for (auto &bk : min_best_keys) bk.T = NUM_BLOCKS + 1;
     for (uint8_t i = 0; i < 4; ++i) {
-        std::cout << static_cast<int>(i) << ":\n";
         for (uint8_t key_round0_num = 0; key_round0_num < 64; ++key_round0_num)
             for (uint8_t key_round2_num = 0; key_round2_num < 64; ++key_round2_num) {
                 size_t T = 0;
@@ -168,21 +165,17 @@ int main() {
                 for (size_t j = 0; j < NUM_BLOCKS; ++j) {
                     std::bitset<6> C1 = Pbox(S(plain_subblocks[i][j] ^ key_round0), i);
                     std::bitset<6> C2 = invPbox(cipher_subblocks[i][j] ^ key_round2, Pbox_transitions[i]);
-                    if ((dotProduct(a, C1) ^ dotProduct(c, C2)) == 0) ++T;
+                    if (((C1.count() & 1) ^ (C2.count() & 1)) == 0) ++T;
                 }
                 if (T > max_best_keys[i].T) {
                     max_best_keys[i].round0 = key_round0;
                     max_best_keys[i].round2 = key_round2;
                     max_best_keys[i].T = T;
-                }
-                if (T < min_best_keys[i].T) {
+                } else if (T < min_best_keys[i].T) {
                     min_best_keys[i].round0 = key_round0;
                     min_best_keys[i].round2 = key_round2;
                     min_best_keys[i].T = T;
                 }
-                std::cout << max_best_keys[i].round0 << " " << max_best_keys[i].round2 << " " << max_best_keys[i].T << "\n";
-                std::cout << min_best_keys[i].round0 << " " << min_best_keys[i].round2 << " " << min_best_keys[i].T << "\n";
-                std::cout << "\n";
             }
     }
     BestKeys best_keys[4];
@@ -198,6 +191,8 @@ int main() {
             best_keys[i] = min_best_keys[i];
             right_part_sum[i] = 1;
         }
+        std::cout << max_best_keys[i].round0 << " " << max_best_keys[i].round2 << " " << max_best_keys[i].T << "\n";
+        std::cout << min_best_keys[i].round0 << " " << min_best_keys[i].round2 << " " << min_best_keys[i].T << "\n";
     }
 
     BlockCipherX cipher;
