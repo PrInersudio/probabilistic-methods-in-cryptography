@@ -46,3 +46,4 @@ target_link_libraries(BestApprox PRIVATE Kuznechik TBB::tbb SubstituteGenerator 
 add_executable(genTexts genTexts.cpp)
 target_link_libraries(genTexts PRIVATE Kuznechik TBB::tbb)
 add_executable(RestoreKey RestoreKey.cpp)
+target_link_libraries(RestoreKey PRIVATE TBB::tbb)

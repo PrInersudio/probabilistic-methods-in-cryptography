@@ -4,7 +4,7 @@
 #include "CTR_DRBG.hpp"
 #include "Kuznechik.hpp"
 
-#define NUM_BLOCKS 16384
+#define NUM_BLOCKS 10000
 #define TEXT_LEN NUM_BLOCKS * 3
 
 static std::string toHex(const std::array<uint8_t, 9> &data) noexcept {

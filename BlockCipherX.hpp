@@ -12,7 +12,6 @@ constexpr uint8_t sbox[] = {
     40, 62, 37, 27, 43,  9, 57,  7,
     32, 31, 30, 44, 14, 38, 25, 48
 };
-
 constexpr uint8_t invsbox[] = {
     37,  1, 14, 36, 11, 17, 39, 55,
     10, 53, 40,  7, 29, 31, 60, 20,
@@ -24,10 +23,7 @@ constexpr uint8_t invsbox[] = {
     32, 54,  0, 22, 19, 44, 49, 12
 };
 
-constexpr uint8_t pbox[] = { 16, 13, 14, 17, 12, 15, 9, 7, 11, 6, 10, 8, 19, 22, 23, 20, 21, 18, 1, 3, 0, 4, 2, 5 };
-constexpr uint8_t invpbox[] = { 20, 18, 22, 19, 21, 23, 9, 7, 11, 6, 10, 8, 4, 1, 2, 5, 0, 3, 17, 12, 15, 16, 13, 14 };
-
-inline std::array<uint8_t, 3> &S(std::array<uint8_t, 3> &block, const uint8_t (&Sbox)[64]) noexcept {
+inline uint8_t *S(uint8_t *block, const uint8_t (&Sbox)[64]) noexcept {
     uint8_t v0 = block[0] >> 2, v1 = ((block[0] & 0b11) << 4) | (block[1] >> 4),
         v2 = ((block[1] & 0b1111) << 2) | (block[2] >> 6), v3 = block[2] & 0b111111;
     v0 = Sbox[v0]; v1 = Sbox[v1]; v2 = Sbox[v2]; v3 = Sbox[v3];
@@ -36,7 +32,10 @@ inline std::array<uint8_t, 3> &S(std::array<uint8_t, 3> &block, const uint8_t (&
     return block;
 }
 
-inline std::array<uint8_t, 3> &L(std::array<uint8_t, 3> &block, const uint8_t (&Pbox)[24]) noexcept {
+constexpr uint8_t pbox[] = { 0, 6, 12, 18, 1, 7, 13, 19, 2, 8, 14, 20, 3, 9, 15, 21, 4, 10, 16, 22, 5, 11, 17, 23 };
+constexpr uint8_t invpbox[] = { 0, 4, 8, 12, 16, 20, 1, 5, 9, 13, 17, 21, 2, 6, 10, 14, 18, 22, 3, 7, 11, 15, 19, 23 };
+
+inline uint8_t *L(uint8_t *block, const uint8_t (&Pbox)[24]) noexcept {
     uint32_t input =
         (static_cast<uint32_t>(block[0]) << 16) |
         (static_cast<uint32_t>(block[1]) << 8) |
@@ -50,15 +49,15 @@ inline std::array<uint8_t, 3> &L(std::array<uint8_t, 3> &block, const uint8_t (&
     return block;
 }
 
+inline uint8_t *X(uint8_t *block, const uint8_t *key) noexcept {
+    for (uint8_t i = 0; i < 3; ++i)
+        block[i] ^= key[i];
+    return block;
+}
+
 class BlockCipherX : public Cipher<3, 9> {
 private:
     uint8_t key_[9];
-
-    inline std::array<uint8_t, 3> &X(std::array<uint8_t, 3> &block, uint8_t round) const noexcept {
-        for (uint8_t i = 0; i < 3; ++i)
-            block[i] ^= key_[round * 3 + i];
-        return block;
-    }
 public:
     static constexpr std::size_t BlockSize = 3;
     static constexpr std::size_t KeySize = 9;
@@ -69,15 +68,11 @@ public:
     inline BlockCipherX(const std::array<uint8_t, 9> &key) noexcept
         { initKeySchedule(key); }
     inline std::array<uint8_t, 3> &encrypt(std::array<uint8_t, 3> &plain_text) const noexcept override {
-        for (const uint8_t round : {uint8_t(0), uint8_t(1)})
-            L(S(X(plain_text, round), sbox), pbox);
-        X(plain_text, uint8_t(2));
+        X(S(X(L(S(X(plain_text.data(), key_), sbox), pbox), key_ + 3), sbox), key_ + 6);
         return plain_text;
     }
     inline std::array<uint8_t, 3> &decrypt(std::array<uint8_t, 3> &cipher_text) const noexcept override {
-        for (const uint8_t round : {uint8_t(2), uint8_t(1)})
-            S(L(X(cipher_text, round), invpbox), invsbox);
-        X(cipher_text, uint8_t(0));
+        X(S(L(X(S(X(cipher_text.data(), key_ + 6), invsbox), key_ + 3), invpbox), invsbox), key_);
         return cipher_text;
     }
 };
