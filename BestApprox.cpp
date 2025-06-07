@@ -57,7 +57,16 @@ struct BestApprox {
 
 
 int main() {
-    Substitute substitute = genSubstitute();
+    Substitute substitute = {
+        58,  1, 55, 53, 49, 35, 36, 11,
+        45, 19,  8,  4, 63, 50,  2, 22,
+        34,  5, 26, 60, 15, 47, 59, 20,
+        54, 28, 29, 17, 24, 12, 16, 13,
+        56, 33, 18, 41,  3,  0, 21,  6,
+        10, 52, 42, 23, 61, 51, 46, 39,
+        40, 62, 37, 27, 43,  9, 57,  7,
+        32, 31, 30, 44, 14, 38, 25, 48
+    };
     CoordinateFunctions coordinate_functions = toCoordinateFunctions(substitute);
 
     BestApprox best_approx[6];
